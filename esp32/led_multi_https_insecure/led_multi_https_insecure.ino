@@ -24,6 +24,7 @@ Lampu lampu[] = {
 const int JUMLAH = sizeof(lampu) / sizeof(lampu[0]);
 
 WiFiClientSecure tls;
+WiFiClient biasa;
 
 void setup() {
   Serial.begin(115200);
@@ -49,7 +50,9 @@ void poll(int i) {
 
   HTTPClient http;
   http.setTimeout(5000);
-  if (!http.begin(tls, URL)) {
+  // https:// pakai TLS tanpa verifikasi, http:// pakai client biasa.
+  bool https = String(URL).startsWith("https://");
+  if (!(https ? http.begin(tls, URL) : http.begin(biasa, URL))) {
     Serial.printf("%s: begin gagal\n", lampu[i].nama);
     return;
   }
