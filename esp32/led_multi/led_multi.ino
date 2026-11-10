@@ -86,6 +86,15 @@ String hostUrl(const char* url) {
   return s.substring(a + 3, b < 0 ? s.length() : b);
 }
 
+// Kalau NTP diblokir jaringan, pakai waktu kompilasi. Sertifikat berlaku
+// berbulan-bulan, jadi selisih beberapa jam tidak masalah.
+void waktuBuild() {
+  struct tm t = {};
+  strptime(__DATE__ " " __TIME__, "%b %d %Y %H:%M:%S", &t);
+  struct timeval tv = { mktime(&t), 0 };
+  settimeofday(&tv, nullptr);
+}
+
 void setup() {
   Serial.begin(115200);
   for (int i = 0; i < JUMLAH; i++) {
@@ -114,8 +123,13 @@ void setup() {
     tunggu++;
   }
   Serial.println();
-  if (sekarang < 1700000000) Serial.println("NTP gagal, HTTPS akan ditolak");
-  else Serial.printf("waktu: %s", ctime(&sekarang));
+  if (sekarang < 1700000000) {
+    waktuBuild();
+    sekarang = time(nullptr);
+    Serial.printf("NTP gagal, pakai waktu build: %s", ctime(&sekarang));
+  } else {
+    Serial.printf("waktu: %s", ctime(&sekarang));
+  }
 
   // Uji jalur: DNS dulu, lalu TCP port 443. Kalau salah satu gagal,
   // masalahnya jaringan, bukan sertifikat/token.
