@@ -7,7 +7,7 @@
 
 const char* SSID     = "SSID_WIFI";
 const char* PASSWORD = "PASSWORD_WIFI";
-const char* URL      = "https://iot.milannn.my.id/api/device/state";
+const char* URL      = "https://DOMAIN-ANDA/api/device/state";
 
 struct Lampu {
   const char* nama;   // label di Serial Monitor

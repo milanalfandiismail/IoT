@@ -84,8 +84,9 @@ Satu board yang punya LED *dan* sensor: tambahkan dua device (`led-...` dan
 `suhu-...`), lalu pakai dua token itu di sketch.
 
 Beberapa LED di satu board: tambahkan satu device bertipe **LED** per lampu, lalu
-pakai sketch `esp32/led_multi/led_multi.ino` dan isi satu baris `lampu[]` per
-LED (token + nomor pin).
+pakai sketch `esp32/led_multi_https_http` (TLS terverifikasi) atau
+`esp32/led_multi_https_insecure` (demo, tanpa verifikasi sertifikat), dan isi
+satu baris `lampu[]` per LED (token + nomor pin).
 
 ### 6. Tes
 
