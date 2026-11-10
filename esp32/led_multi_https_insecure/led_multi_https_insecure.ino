@@ -45,6 +45,9 @@ void sambungWiFi() {
     Serial.print(".");
   }
   Serial.printf("\nWiFi tersambung  IP: %s\n", WiFi.localIP().toString().c_str());
+  Serial.printf("SSID: %s  GW: %s  DNS: %s\n", WiFi.SSID().c_str(),
+                WiFi.gatewayIP().toString().c_str(),
+                WiFi.dnsIP().toString().c_str());
 }
 
 // Hotspot HP bisa memberi IP sebelum NAT/DNS-nya siap; itu penyebab
