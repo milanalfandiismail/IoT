@@ -123,11 +123,16 @@ void setup() {
   if (WiFi.hostByName(host.c_str(), ip)) Serial.printf("DNS %s -> %s\n", host.c_str(), ip.toString().c_str());
   else Serial.printf("DNS %s gagal\n", host.c_str());
   WiFiClient uji;
-  if (uji.connect(host.c_str(), 443)) {
-    Serial.println("TCP 443 OK");
-    uji.stop();
-  } else {
-    Serial.println("TCP 443 gagal");
+  // Uji beberapa port: kalau 443 ditutup jaringan, Cloudflare masih bisa
+  // diakses lewat 8443/2053 (port HTTPS yang diproksikan Cloudflare).
+  const int portUji[] = {80, 443, 8443, 2053};
+  for (int p : portUji) {
+    if (uji.connect(host.c_str(), p)) {
+      Serial.printf("TCP %d OK\n", p);
+      uji.stop();
+    } else {
+      Serial.printf("TCP %d gagal\n", p);
+    }
   }
 }
 
