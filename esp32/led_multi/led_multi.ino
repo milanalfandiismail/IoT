@@ -85,6 +85,8 @@ void setup() {
     digitalWrite(lampu[i].pin, LOW);
   }
   tls.setCACert(CA_CERT);
+  Serial.print("URL: ");
+  Serial.println(URL);
   WiFi.begin(SSID, PASSWORD);
   while (WiFi.status() != WL_CONNECTED) {
     delay(300);
@@ -121,6 +123,7 @@ void poll(int i) {
   } else {
     Serial.printf("%s: poll gagal: %d (%s)\n", lampu[i].nama, code,
                   HTTPClient::errorToString(code).c_str());
+    if (https) Serial.printf("  TLS error: %d, WiFi %d dBm\n", tls.lastError(), WiFi.RSSI());
   }
   http.end();
 }
