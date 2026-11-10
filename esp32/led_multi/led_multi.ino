@@ -101,6 +101,7 @@ void setup() {
     Serial.print(".");
   }
   Serial.println("\nWiFi tersambung");
+  Serial.printf("IP: %s  MAC: %s\n", WiFi.localIP().toString().c_str(), WiFi.macAddress().c_str());
   // Verifikasi sertifikat butuh jam yang benar; tanpa NTP jam ESP32 masih 1970.
   configTime(0, 0, "pool.ntp.org", "time.google.com");
   time_t sekarang = time(nullptr);
