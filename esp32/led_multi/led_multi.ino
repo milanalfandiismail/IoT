@@ -137,7 +137,11 @@ void poll(int i) {
   } else {
     Serial.printf("%s: poll gagal: %d (%s)\n", lampu[i].nama, code,
                   HTTPClient::errorToString(code).c_str());
-    if (https) Serial.printf("  TLS error: %d, WiFi %d dBm\n", tls.lastError(), WiFi.RSSI());
+    if (https) {
+      char pesan[128];
+      int err = tls.lastError(pesan, sizeof(pesan));
+      Serial.printf("  TLS error: %d (%s), WiFi %d dBm\n", err, pesan, WiFi.RSSI());
+    }
   }
   http.end();
 }
