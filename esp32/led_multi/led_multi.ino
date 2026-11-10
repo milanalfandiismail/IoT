@@ -93,6 +93,20 @@ void setup() {
     Serial.print(".");
   }
   Serial.println("\nWiFi tersambung");
+  // Verifikasi sertifikat butuh jam yang benar; tanpa NTP jam ESP32 masih 1970.
+  configTime(0, 0, "pool.ntp.org", "time.google.com");
+  time_t sekarang = time(nullptr);
+  int tunggu = 0;
+  Serial.print("sinkron waktu");
+  while (sekarang < 1700000000 && tunggu < 40) {   // maks 20 detik
+    delay(500);
+    Serial.print(".");
+    sekarang = time(nullptr);
+    tunggu++;
+  }
+  Serial.println();
+  if (sekarang < 1700000000) Serial.println("NTP gagal, HTTPS akan ditolak");
+  else Serial.printf("waktu: %s", ctime(&sekarang));
 }
 
 void poll(int i) {
