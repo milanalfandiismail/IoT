@@ -1,18 +1,18 @@
-# Kontrol LED ESP32 via Flask
+# Dashboard IoT ESP32 via Flask
 
-Server Flask + dashboard web untuk menyalakan/mematikan satu LED ESP32 lewat HTTP polling.
+Server Flask + dashboard web untuk mengontrol LED dan melihat suhu dari ESP32
+lewat HTTP. Setiap device punya tipe (LED / Suhu) dan kartunya menyesuaikan.
 
 ```
-ESP32  --GET /api/device/state (Bearer token device)-->  Flask   tiap 1 detik
-       <-- {"on": true} ------------------------------
-
-Browser --POST /login (session)------+
-        --POST /api/led {"on":true}--+--> Flask
+ESP32 LED --GET  /api/device/state (Bearer token device)--------+
+ESP32 DHT --POST /api/device/temperature (Bearer token device)--+--> Flask + data.db
+Browser   --POST /api/devices/<id>/led (session)----------------+
 ```
 
 - ESP32 adalah client: dia yang menembak Flask, jadi Flask tidak perlu tahu IP ESP32.
 - LED berubah maksimal ~1 detik setelah perintah dikirim.
-- State disimpan di memori; restart server = LED kembali ke `OFF`.
+- Semua device dan akun tersimpan di `data.db` (dibuat otomatis saat server jalan).
+- State LED **tidak** hilang saat server restart.
 
 ## Setup
 
@@ -26,31 +26,20 @@ pip install -r requirements.txt
 
 ### 2. Buat `.env`
 
-Salin `.env.example` menjadi `.env`, lalu isi:
+Salin `.env.example` menjadi `.env`. Isinya hanya dua rahasia server:
 
-**Hash password** (yang disimpan hanya hash, bukan password asli):
-
-```powershell
-python -c "from werkzeug.security import generate_password_hash; print(generate_password_hash('password-kamu'))"
+```
+SECRET_KEY=<token acak pertama>
+API_TOKEN=<token acak kedua>
 ```
 
-**Token acak** (jalankan dua kali: `SECRET_KEY` dan `API_TOKEN` — keduanya harus berbeda):
+Buat token acak (jalankan dua kali, keduanya harus berbeda):
 
 ```powershell
 python -c "import secrets; print(secrets.token_urlsafe(32))"
 ```
 
-Isi `.env`:
-
-```
-SECRET_KEY=<token acak pertama>
-ADMIN_USER=admin
-ADMIN_PASSWORD_HASH=<hasil generate_password_hash>
-API_TOKEN=<token acak kedua>
-```
-
-Token device **tidak** ada di `.env` — dibuat dari halaman `/devices` setelah login.
-
+`API_TOKEN` dipakai untuk mengontrol LED lewat `curl`, bukan untuk login.
 `.env` sudah masuk `.gitignore` — jangan pernah di-commit.
 
 ### 3. Jalankan
@@ -59,48 +48,74 @@ Token device **tidak** ada di `.env` — dibuat dari halaman `/devices` setelah 
 python app.py
 ```
 
-Server jalan di `0.0.0.0:5000`, jadi bisa diakses ESP32. (Alternatif: `flask --app app run --host 0.0.0.0`.)
+Server jalan di `0.0.0.0:5000`, jadi bisa diakses ESP32. Windows akan
+menanyakan izin firewall untuk Python — pilih **Allow** (jaringan Private).
 
-Windows akan menanyakan izin firewall untuk Python — pilih **Allow** (jaringan Private).
+Buka `http://127.0.0.1:5000`.
 
-Buka `http://127.0.0.1:5000`, login dengan `ADMIN_USER` dan password yang kamu
-hash tadi. Dashboard punya tombol ON/OFF dan tombol Keluar.
+Akun admin dibuat otomatis kalau belum ada admin di database:
 
-### 4. Tambah device
+| Username | Password |
+|---|---|
+| `admin` | `rahasia` |
 
-Buka **Kelola device** di dashboard (atau `/devices`), isi nama (misal
-`led-dapur`), lalu **Tambah device**. Token muncul **sekali** di halaman itu —
-salin ke sketch ESP32 (`TOKEN`). Server hanya menyimpan hash-nya, jadi token
-tidak bisa dilihat lagi: kalau hilang, cabut device dan buat ulang.
+Segera ganti lewat menu **Akun → Ganti password**.
 
-Daftar device tersimpan di `data.db` (dibuat otomatis, sudah git-ignored).
-Menekan **Cabut** membuat token device itu langsung tidak berlaku.
+### 4. Kelola akun
 
-### 5. Tes
+Semua anggota kelompok bisa login sendiri dari menu **Akun**:
+
+- **Admin** menambah user, me-reset password user, dan menghapus user.
+- Setiap user bisa mengganti password sendiri.
+- Semua user melihat dan mengontrol device yang sama — data tidak dipisah per akun.
+- Admin tidak bisa menghapus akunnya sendiri.
+
+### 5. Tambah device
+
+Di dashboard tekan **+ Tambah device**, isi nama, pilih tipe:
+
+- **LED** — kartu menampilkan switch ON/OFF.
+- **Suhu** — kartu menampilkan suhu terakhir dan kapan dibaca.
+
+Token device ditampilkan di kartu (**Lihat token**) dan bisa disalin kapan saja.
+Menekan **Cabut device** membuat token itu langsung tidak berlaku.
+
+Satu board yang punya LED *dan* sensor: tambahkan dua device (`led-...` dan
+`suhu-...`), lalu pakai dua token itu di sketch.
+
+### 6. Tes
 
 ```powershell
-pytest -v
+pytest -q
 ```
 
-28 tes: login/session, CRUD device + hash token, validasi body, pemisahan
-`API_TOKEN` dari token device, dan skema `bearer` huruf kecil.
+63 tes: login/session, akun admin & anggota, tipe device, state LED per device,
+endpoint suhu, validasi body, migrasi `data.db` lama, dan skema `bearer`.
 
-### 6. Kontrol lewat terminal (opsional)
+### 7. Kontrol lewat terminal (opsional)
+
+Nyalakan LED dengan `API_TOKEN` (ganti `<id>` dengan id device dari dashboard):
 
 ```powershell
-curl.exe -X POST http://127.0.0.1:5000/api/led -H "Authorization: Bearer <API_TOKEN>" -H "Content-Type: application/json" -d "{\"on\":true}"
+curl.exe -X POST http://127.0.0.1:5000/api/devices/1/led -H "Authorization: Bearer <API_TOKEN>" -H "Content-Type: application/json" -d "{\"on\":true}"
 ```
 
-Cek state seperti yang dilihat ESP32 (pakai token dari halaman `/devices`):
+Cek state seperti yang dilihat ESP32 (pakai token device bertipe LED):
 
 ```powershell
 curl.exe http://127.0.0.1:5000/api/device/state -H "Authorization: Bearer <token-device>"
 ```
 
-### 7. Firmware ESP32
+Kirim suhu seperti yang dilakukan ESP32 (token device bertipe Suhu):
+
+```powershell
+curl.exe -X POST http://127.0.0.1:5000/api/device/temperature -H "Authorization: Bearer <token-device>" -H "Content-Type: application/json" -d "{\"celsius\":27.4}"
+```
+
+### 8. Firmware ESP32
 
 Lihat [`esp32/README.md`](esp32/README.md). Yang perlu diubah: SSID, password
-Wi-Fi, IP laptop (`ipconfig`), dan `TOKEN` = token device dari halaman `/devices`.
+Wi-Fi, IP laptop (`ipconfig`), dan `TOKEN` = token device dari kartu dashboard.
 
 ## Endpoint
 
@@ -109,24 +124,31 @@ Wi-Fi, IP laptop (`ipconfig`), dan `TOKEN` = token device dari halaman `/devices
 | `GET` | `/login` | publik | Form login |
 | `POST` | `/login` | publik | `username`, `password` → 302 ke `/`, salah → 401 |
 | `POST` | `/logout` | session | Hapus session |
-| `GET` | `/` | session | Dashboard |
-| `GET` | `/devices` | session | Daftar device + form tambah |
-| `POST` | `/devices` | session | `name` → halaman menampilkan token sekali; nama kosong → 400 |
-| `POST` | `/devices/<id>/delete` | session | Cabut device → 302 |
-| `POST` | `/api/led` | session atau `Bearer API_TOKEN` | `{"on": true\|false}` → `{"on": bool}` |
-| `GET` | `/api/device/state` | hanya token device dari `/devices` | `{"on": bool}` |
+| `GET` | `/` | session | Dashboard kartu device |
+| `GET` | `/akun` | session | Ganti password; admin melihat daftar user |
+| `POST` | `/akun/password` | session | `password_lama`, `password_baru` |
+| `POST` | `/akun/users` | admin | `username`, `password`, `is_admin` |
+| `POST` | `/akun/users/<id>/password` | admin | Reset password user |
+| `POST` | `/akun/users/<id>/delete` | admin | Hapus user |
+| `POST` | `/devices` | session | `name`, `type` (`led`/`suhu`) → token di dashboard |
+| `POST` | `/devices/<id>/delete` | session | Cabut device |
+| `GET` | `/api/devices` | session | JSON semua device untuk refresh dashboard |
+| `POST` | `/api/devices/<id>/led` | session atau `Bearer API_TOKEN` | `{"on": true\|false}` |
+| `GET` | `/api/device/state` | token device LED | `{"on": bool}` |
+| `POST` | `/api/device/temperature` | token device Suhu | `{"celsius": angka -50..80}` |
 
-`API_TOKEN` tidak berlaku di `/api/device/state`, dan token device tidak
-berlaku di `/api/led` / halaman web — token device yang bocor tidak bisa
-membuka dashboard.
+`API_TOKEN` tidak berlaku di endpoint token device, dan token device tidak
+berlaku di halaman web — token device yang bocor tidak bisa membuka dashboard.
 
 ## Troubleshooting
 
 | Gejala | Penyebab |
 |---|---|
-| App gagal start dengan `KeyError` atau `RuntimeError` | Ada variabel yang hilang/kosong di `.env` |
-| ESP32 `poll gagal: -1` | IP salah, server tidak pakai `--host 0.0.0.0`, atau firewall memblokir port 5000 |
-| ESP32 `poll gagal: 401` | `TOKEN` di sketch bukan token dari `/devices`, atau device sudah dicabut |
-| Login selalu 401 | `ADMIN_PASSWORD_HASH` bukan hasil `generate_password_hash`, atau password salah |
+| App gagal start dengan `RuntimeError` | `SECRET_KEY` atau `API_TOKEN` kosong di `.env` |
+| ESP32 `poll gagal: -1` | IP salah, server tidak jalan di `0.0.0.0`, atau firewall memblokir port 5000 |
+| ESP32 `poll gagal: 401` | `TOKEN` di sketch bukan token device, atau device sudah dicabut |
+| ESP32 `POST 400` | Kirim suhu ke device bertipe LED, atau nilai di luar `-50..80` |
+| Login selalu 401 | Password salah, atau user sudah dihapus admin |
 | Tombol tidak berubah | Session kedaluwarsa (ganti `SECRET_KEY`), login ulang |
-| Token device hilang | Tidak bisa dilihat lagi (hanya hash tersimpan): cabut lalu tambah device baru |
+| Suhu tidak muncul | Sketch `dht_post` belum jalan, token salah, atau device bertipe LED |
+| Butuh reset total | Hentikan server, hapus `data.db`; admin/rahasia dibuat lagi saat start |
