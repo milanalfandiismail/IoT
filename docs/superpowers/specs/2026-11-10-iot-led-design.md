@@ -77,3 +77,22 @@ Browser ──POST /login → session──┐   │
 - LED baru berubah maksimal 1 detik setelah perintah (keterlambatan polling).
 - State hilang saat server restart; ESP32 akan menyamakan diri dalam 1 detik.
 - HTTP tanpa TLS: token bisa disadap di jaringan yang sama. Dapat diterima untuk tugas di LAN pribadi.
+
+## Revisi 2 (2026-11-10): Manajemen device dari web
+
+**Status:** Disetujui (pilihan "opsi 1" dari pemilik proyek).
+
+- `DEVICE_TOKEN` dihapus dari `.env`. Token device dibuat lewat halaman `/devices`: tambah device, lihat daftar, cabut.
+- Penyimpanan: SQLite `data.db` (git-ignored), tabel `devices(id, name, token_hash, enabled)`. Dibuat otomatis saat pertama dipakai, tanpa dependency baru (`sqlite3` bawaan Python).
+- Token plaintext ditampilkan **sekali** saat device dibuat; database hanya menyimpan SHA-256 token. Token tidak bisa dilihat lagi, hanya dicabut lalu dibuat ulang.
+- `GET /api/device/state` mencari token di tabel (`enabled = 1`), bukan membandingkan dengan env. Token device yang dicabut langsung 401.
+- `API_TOKEN` (manusia/curl) dan akun admin tetap di `.env`, sesuai keputusan pemilik proyek.
+- Lokasi DB bisa diganti lewat env `DB_PATH`; tes memakainya untuk DB sementara.
+- Non-goal revisi ini: indikator online/offline, expiry token, multi-LED, multi-admin.
+
+| Method | Path | Auth | Hasil |
+|---|---|---|---|
+| `GET` | `/devices` | session | Daftar device + form tambah |
+| `POST` | `/devices` | session | Form `name`. Kosong → 400. Berhasil → halaman menampilkan token sekali |
+| `POST` | `/devices/<id>/delete` | session | Hapus device (token langsung tidak berlaku), 302 ke `/devices` |
+

@@ -8,7 +8,8 @@ dan menyalakan LED di GPIO2 sesuai respons `{"on": true|false}`.
 1. `SSID` dan `PASSWORD` — Wi-Fi yang sama dengan laptop server.
 2. `URL` — ganti `192.168.1.10` dengan IP laptop hasil `ipconfig` (IPv4 Address).
    Pakai IP LAN, bukan `127.0.0.1`.
-3. `TOKEN` — samakan dengan `DEVICE_TOKEN` di `.env`.
+3. `TOKEN` — token device dari halaman `/devices` (login dulu di dashboard,
+   klik **Kelola device**, tambah device, salin token yang muncul sekali itu).
 
 ## Upload
 
