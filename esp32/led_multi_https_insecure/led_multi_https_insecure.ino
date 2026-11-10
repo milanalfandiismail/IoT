@@ -26,6 +26,42 @@ const int JUMLAH = sizeof(lampu) / sizeof(lampu[0]);
 WiFiClientSecure tls;
 WiFiClient biasa;
 
+// Host polos dari URL, misal "iot.contoh.id".
+String hostUrl() {
+  int a = String(URL).indexOf("://");
+  a = (a < 0) ? 0 : a + 3;
+  int b = String(URL).indexOf('/', a);
+  if (b < 0) b = String(URL).length();
+  return String(URL).substring(a, b);
+}
+
+void sambungWiFi() {
+  WiFi.disconnect();
+  delay(500);
+  WiFi.begin(SSID, PASSWORD);
+  unsigned long mulai = millis();
+  while (WiFi.status() != WL_CONNECTED && millis() - mulai < 20000) {
+    delay(300);
+    Serial.print(".");
+  }
+  Serial.printf("\nWiFi tersambung  IP: %s\n", WiFi.localIP().toString().c_str());
+}
+
+// Hotspot HP bisa memberi IP sebelum NAT/DNS-nya siap; itu penyebab
+// "poll gagal -1" di boot pertama yang dulu baru sembuh setelah restart.
+bool tungguDNS() {
+  IPAddress ip;
+  for (int i = 0; i < 20; i++) {
+    if (WiFi.hostByName(hostUrl().c_str(), ip)) {
+      Serial.printf("DNS ok: %s\n", ip.toString().c_str());
+      return true;
+    }
+    Serial.print("d");
+    delay(1000);
+  }
+  return false;
+}
+
 void setup() {
   Serial.begin(115200);
   for (int i = 0; i < JUMLAH; i++) {
@@ -33,13 +69,8 @@ void setup() {
     digitalWrite(lampu[i].pin, LOW);
   }
   tls.setInsecure();   // tanpa cek sertifikat: koneksi tetap terenkripsi
-  WiFi.begin(SSID, PASSWORD);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(300);
-    Serial.print(".");
-  }
-  Serial.printf("\nWiFi tersambung  IP: %s\n", WiFi.localIP().toString().c_str());
-  delay(2000);   // beri waktu hotspot HP menyelesaikan NAT/DNS
+  sambungWiFi();
+  for (int i = 0; i < 5 && !tungguDNS(); i++) sambungWiFi();
 }
 
 bool poll(int i) {
@@ -49,7 +80,7 @@ bool poll(int i) {
   }
 
   HTTPClient http;
-  http.setTimeout(5000);
+  http.setTimeout(3000);
   // https:// pakai TLS tanpa verifikasi, http:// pakai client biasa.
   bool https = String(URL).startsWith("https://");
   if (!(https ? http.begin(tls, URL) : http.begin(biasa, URL))) {
@@ -82,15 +113,13 @@ void loop() {
   bool semua = true;
   for (int i = 0; i < JUMLAH; i++) semua = poll(i) && semua;
 
-  // Hotspot HP kadang belum siap saat boot: sambung ulang sendiri.
   gagal = semua ? 0 : gagal + 1;
-  if (gagal >= 5) {
-    Serial.println("5x gagal, sambung ulang WiFi");
-    WiFi.disconnect();
-    delay(1000);
-    WiFi.begin(SSID, PASSWORD);
+  if (gagal >= 2) {
+    Serial.println("2x gagal, sambung ulang WiFi");
+    sambungWiFi();
+    tungguDNS();
     gagal = 0;
-    delay(3000);
+    delay(1000);
   }
   delay(1000);   // satu putaran per detik
 }
