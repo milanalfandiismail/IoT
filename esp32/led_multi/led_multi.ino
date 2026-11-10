@@ -78,6 +78,14 @@ const int JUMLAH = sizeof(lampu) / sizeof(lampu[0]);
 WiFiClientSecure tls;
 WiFiClient biasa;
 
+// Host dari URL, untuk uji DNS/TCP sebelum polling.
+String hostUrl(const char* url) {
+  String s(url);
+  int a = s.indexOf("://");
+  int b = s.indexOf('/', a + 3);
+  return s.substring(a + 3, b < 0 ? s.length() : b);
+}
+
 void setup() {
   Serial.begin(115200);
   for (int i = 0; i < JUMLAH; i++) {
@@ -107,6 +115,20 @@ void setup() {
   Serial.println();
   if (sekarang < 1700000000) Serial.println("NTP gagal, HTTPS akan ditolak");
   else Serial.printf("waktu: %s", ctime(&sekarang));
+
+  // Uji jalur: DNS dulu, lalu TCP port 443. Kalau salah satu gagal,
+  // masalahnya jaringan, bukan sertifikat/token.
+  String host = hostUrl(URL);
+  IPAddress ip;
+  if (WiFi.hostByName(host.c_str(), ip)) Serial.printf("DNS %s -> %s\n", host.c_str(), ip.toString().c_str());
+  else Serial.printf("DNS %s gagal\n", host.c_str());
+  WiFiClient uji;
+  if (uji.connect(host.c_str(), 443)) {
+    Serial.println("TCP 443 OK");
+    uji.stop();
+  } else {
+    Serial.println("TCP 443 gagal");
+  }
 }
 
 void poll(int i) {
