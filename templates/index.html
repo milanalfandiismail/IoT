@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kontrol LED</title>
+  <style>
+    body { font-family: system-ui, sans-serif; display: grid; place-items: center; min-height: 100vh; margin: 0; background: #f4f4f5; }
+    main { background: #fff; padding: 2rem; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,.08); text-align: center; width: 280px; }
+    h1 { font-size: 1.1rem; margin: 0 0 1rem; }
+    #state { font-size: 2rem; display: block; margin-bottom: 1.5rem; }
+    .on { color: #15803d; }
+    .off { color: #71717a; }
+    button { padding: .6rem 1rem; border: 0; border-radius: 6px; font-size: 1rem; cursor: pointer; }
+    #toggle { background: #18181b; color: #fff; width: 100%; }
+    form button { background: transparent; color: #71717a; margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Kontrol LED</h1>
+    <strong id="state" class="{{ 'on' if state.on else 'off' }}">{{ "ON" if state.on else "OFF" }}</strong>
+    <button id="toggle">{{ "Matikan LED" if state.on else "Nyalakan LED" }}</button>
+    <form method="post" action="/logout"><button type="submit">Keluar</button></form>
+  </main>
+  <script>
+    const isOn = {{ state.on|tojson }};
+    document.getElementById('toggle').addEventListener('click', async () => {
+      await fetch('/api/led', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ on: !isOn })
+      });
+      location.reload();
+    });
+  </script>
+</body>
+</html>

@@ -62,7 +62,7 @@ def create_app() -> Flask:
     @app.get("/")
     @require_session
     def index():
-        return "ok"
+        return render_template("index.html", state=STATE)
 
     @app.post("/api/led")
     def set_led():

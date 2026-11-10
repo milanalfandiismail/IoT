@@ -9,7 +9,12 @@ os.environ["ADMIN_PASSWORD_HASH"] = generate_password_hash("rahasia")
 os.environ["API_TOKEN"] = "token-manusia"
 os.environ["DEVICE_TOKEN"] = "token-esp32"
 
-from app import create_app  # noqa: E402
+from app import STATE, create_app  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def reset_state():
+    STATE["on"] = False
 
 
 @pytest.fixture
