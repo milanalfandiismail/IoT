@@ -56,11 +56,12 @@ Token device **tidak** ada di `.env` — dibuat dari halaman `/devices` setelah 
 ### 3. Jalankan
 
 ```powershell
-flask --app app run --host 0.0.0.0
+python app.py
 ```
 
-`--host 0.0.0.0` wajib agar ESP32 bisa connect. Windows akan menanyakan izin
-firewall untuk Python — pilih **Allow** (jaringan Private).
+Server jalan di `0.0.0.0:5000`, jadi bisa diakses ESP32. (Alternatif: `flask --app app run --host 0.0.0.0`.)
+
+Windows akan menanyakan izin firewall untuk Python — pilih **Allow** (jaringan Private).
 
 Buka `http://127.0.0.1:5000`, login dengan `ADMIN_USER` dan password yang kamu
 hash tadi. Dashboard punya tombol ON/OFF dan tombol Keluar.
