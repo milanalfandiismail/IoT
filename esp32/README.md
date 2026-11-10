@@ -63,3 +63,6 @@ Untuk `dht_post`, sesuaikan juga `DHT_PIN` (default GPIO4) dan `DHT_TYPE`
 - DHT11/DHT22 butuh pull-up 10 kΩ dari pin data ke 3V3.
 - Server Flask harus dijalankan dengan `--host 0.0.0.0` agar bisa diakses dari
   ESP32, dan port 5000 harus diizinkan di Windows Firewall.
+- `led_multi` bisa `http://` maupun `https://`: skema di `URL` yang menentukan.
+  Untuk HTTPS, `CA_CERT` di sketch harus berisi root CA server (default sudah
+  diisi root CA publik yang umum; ganti bila memakai sertifikat sendiri).
