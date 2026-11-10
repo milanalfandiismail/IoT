@@ -29,17 +29,28 @@ def require_session(view):
 
 def bearer_ok(expected: str) -> bool:
     scheme, _, token = request.headers.get("Authorization", "").partition(" ")
-    return scheme.lower() == "bearer" and hmac.compare_digest(token.strip(), expected)
+    return scheme.lower() == "bearer" and hmac.compare_digest(
+        token.strip().encode(), expected.encode()
+    )
+
+
+def required_env(name: str) -> str:
+    value = os.environ.get(name, "").strip()
+    if not value:
+        raise RuntimeError(f"{name} kosong di .env")
+    return value
 
 
 def create_app() -> Flask:
     load_dotenv()
     app = Flask(__name__)
     app.secret_key = os.environ["SECRET_KEY"]
-    admin_user = os.environ["ADMIN_USER"]
-    admin_hash = os.environ["ADMIN_PASSWORD_HASH"]
-    api_token = os.environ["API_TOKEN"]
-    device_token = os.environ["DEVICE_TOKEN"]
+    admin_user = required_env("ADMIN_USER")
+    admin_hash = required_env("ADMIN_PASSWORD_HASH")
+    api_token = required_env("API_TOKEN")
+    device_token = required_env("DEVICE_TOKEN")
+    if api_token == device_token:
+        raise RuntimeError("API_TOKEN dan DEVICE_TOKEN harus berbeda")
 
     @app.get("/login")
     def login():

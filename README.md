@@ -34,7 +34,7 @@ Salin `.env.example` menjadi `.env`, lalu isi:
 python -c "from werkzeug.security import generate_password_hash; print(generate_password_hash('password-kamu'))"
 ```
 
-**Token acak** (jalankan dua kali, satu untuk `API_TOKEN`, satu untuk `DEVICE_TOKEN`):
+**Token acak** (jalankan tiga kali: `SECRET_KEY`, `API_TOKEN`, `DEVICE_TOKEN` — ketiganya harus berbeda):
 
 ```powershell
 python -c "import secrets; print(secrets.token_urlsafe(32))"
@@ -108,7 +108,7 @@ berlaku di `/api/led` — token device yang bocor tidak bisa membuka dashboard.
 
 | Gejala | Penyebab |
 |---|---|
-| App gagal start dengan `KeyError` | Ada variabel yang kosong di `.env` |
+| App gagal start dengan `KeyError` atau `RuntimeError` | Ada variabel yang hilang/kosong di `.env`, atau `API_TOKEN` sama dengan `DEVICE_TOKEN` |
 | ESP32 `poll gagal: -1` | IP salah, server tidak pakai `--host 0.0.0.0`, atau firewall memblokir port 5000 |
 | ESP32 `poll gagal: 401` | `TOKEN` di sketch ≠ `DEVICE_TOKEN` di `.env` |
 | Login selalu 401 | `ADMIN_PASSWORD_HASH` bukan hasil `generate_password_hash`, atau password salah |

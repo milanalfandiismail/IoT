@@ -50,3 +50,9 @@ def test_bearer_scheme_is_case_insensitive(client):
     r = client.get("/api/device/state",
                    headers={"Authorization": "bearer token-esp32"})
     assert r.status_code == 200
+
+
+def test_non_ascii_token_is_401(client):
+    r = client.get("/api/device/state",
+                   headers={"Authorization": "Bearer tok\u00e9"})
+    assert r.status_code == 401
