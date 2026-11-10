@@ -64,6 +64,22 @@ def create_app() -> Flask:
     def index():
         return "ok"
 
+    @app.post("/api/led")
+    def set_led():
+        if not (session.get("user") or bearer_ok(api_token)):
+            return jsonify(error="unauthorized"), 401
+        body = request.get_json(silent=True)
+        if not isinstance(body, dict) or not isinstance(body.get("on"), bool):
+            return jsonify(error="body harus JSON {\"on\": true|false}"), 400
+        STATE["on"] = body["on"]
+        return jsonify(STATE)
+
+    @app.get("/api/device/state")
+    def device_state():
+        if not bearer_ok(device_token):
+            return jsonify(error="unauthorized"), 401
+        return jsonify(STATE)
+
     return app
 
 
