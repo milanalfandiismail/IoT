@@ -1,9 +1,12 @@
 # Firmware ESP32
 
-Dua sketch, pilih sesuai device yang dibuat di dashboard:
+Tiga sketch, pilih sesuai device yang dibuat di dashboard:
 
-- `led_poll/led_poll.ino` — polling `GET /api/device/state` tiap 1 detik, LED di
-  GPIO2 mengikuti respons `{"on": true|false}`. Pakai token device bertipe **LED**.
+- `led_poll/led_poll.ino` — satu LED. Polling `GET /api/device/state` tiap 1
+  detik, LED di GPIO2 mengikuti respons `{"on": true|false}`. Pakai token device
+  bertipe **LED**.
+- `led_multi/led_multi.ino` — beberapa LED di satu board. Tiap LED punya token
+  dan pin sendiri; semua di-poll tiap 1 detik. Pakai untuk 2+ LED.
 - `dht_post/dht_post.ino` — baca DHT11/DHT22 tiap 5 detik, kirim
   `POST /api/device/temperature`. Pakai token device bertipe **Suhu**.
 
@@ -13,6 +16,10 @@ Dua sketch, pilih sesuai device yang dibuat di dashboard:
 2. `URL` — ganti `10.10.10.25` dengan IP laptop hasil `ipconfig` (IPv4 Address).
    Pakai IP LAN, bukan `127.0.0.1`.
 3. `TOKEN` — token device dari kartu **Lihat token** di dashboard.
+
+Untuk `led_multi`, isi array `lampu[]`: satu baris per LED berisi label, token,
+dan nomor GPIO. Board tidak menyimpan pin di server — kalau kabel pindah pin,
+ubah baris itu lalu upload ulang. LED di dashboard tetap satu kartu per baris.
 
 Untuk `dht_post`, sesuaikan juga `DHT_PIN` (default GPIO4) dan `DHT_TYPE`
 (`DHT22` atau `DHT11`).
@@ -33,6 +40,14 @@ Untuk `dht_post`, sesuaikan juga `DHT_PIN` (default GPIO4) dan `DHT_TYPE`
 - LED mengikuti tombol di dashboard dalam maksimal ~1 detik.
 - Server dimatikan → `poll gagal: -1`, LED tetap di state terakhir.
 - Server dihidupkan lagi → LED menyamakan diri dalam 1 detik.
+
+`led_multi`:
+
+- Sama seperti `led_poll`, tapi baris log menyebut label dan pin:
+  `led-2 (GPIO4) ON`.
+- Satu token ditolak (`401`) hanya membuat baris itu gagal; LED lain tetap
+  mengikuti dashboard.
+- Tambah LED = tambah satu baris di `lampu[]` dan satu device di dashboard.
 
 `dht_post`:
 
