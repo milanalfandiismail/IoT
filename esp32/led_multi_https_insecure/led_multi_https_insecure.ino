@@ -39,13 +39,13 @@ void setup() {
     Serial.print(".");
   }
   Serial.printf("\nWiFi tersambung  IP: %s\n", WiFi.localIP().toString().c_str());
+  delay(2000);   // beri waktu hotspot HP menyelesaikan NAT/DNS
 }
 
-void poll(int i) {
+bool poll(int i) {
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("WiFi putus");
-    WiFi.reconnect();
-    return;
+    return false;
   }
 
   HTTPClient http;
@@ -54,11 +54,12 @@ void poll(int i) {
   bool https = String(URL).startsWith("https://");
   if (!(https ? http.begin(tls, URL) : http.begin(biasa, URL))) {
     Serial.printf("%s: begin gagal\n", lampu[i].nama);
-    return;
+    return false;
   }
   http.addHeader("Authorization", String("Bearer ") + lampu[i].token);
   int code = http.GET();
-  if (code == 200) {
+  bool ok = (code == 200);
+  if (ok) {
     String body = http.getString();
     bool on = body.indexOf("true") >= 0;
     if (on != lampu[i].nyala) {
@@ -72,9 +73,24 @@ void poll(int i) {
                   HTTPClient::errorToString(code).c_str());
   }
   http.end();
+  return ok;
 }
 
+int gagal = 0;
+
 void loop() {
-  for (int i = 0; i < JUMLAH; i++) poll(i);
+  bool semua = true;
+  for (int i = 0; i < JUMLAH; i++) semua = poll(i) && semua;
+
+  // Hotspot HP kadang belum siap saat boot: sambung ulang sendiri.
+  gagal = semua ? 0 : gagal + 1;
+  if (gagal >= 5) {
+    Serial.println("5x gagal, sambung ulang WiFi");
+    WiFi.disconnect();
+    delay(1000);
+    WiFi.begin(SSID, PASSWORD);
+    gagal = 0;
+    delay(3000);
+  }
   delay(1000);   // satu putaran per detik
 }
