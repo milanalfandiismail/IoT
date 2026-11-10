@@ -89,6 +89,9 @@ void diagnosa() {
   Serial.printf("GW: %s\n", WiFi.gatewayIP().toString().c_str());
   uji(WiFi.gatewayIP().toString().c_str(), 80);
   uji("1.1.1.1", 443);
+  uji("8.8.8.8", 443);
+  uji("www.google.com", 443);
+  uji("104.21.44.235", 443);   // IP Cloudflare hasil DNS di jaringan ini
   uji(hostUrl().c_str(), 80);
   uji(hostUrl().c_str(), 443);
 }
