@@ -43,12 +43,14 @@ void poll(int i) {
   http.addHeader("Authorization", String("Bearer ") + lampu[i].token);
   int code = http.GET();
   if (code == 200) {
-    bool on = http.getString().indexOf("true") >= 0;
+    String body = http.getString();
+    bool on = body.indexOf("true") >= 0;
     if (on != lampu[i].nyala) {
       lampu[i].nyala = on;
       Serial.printf("%s (GPIO%d) %s\n", lampu[i].nama, lampu[i].pin, on ? "ON" : "OFF");
     }
     digitalWrite(lampu[i].pin, on ? HIGH : LOW);
+    Serial.printf("%s body: %s\n", lampu[i].nama, body.c_str());
   } else {
     Serial.printf("%s: poll gagal: %d\n", lampu[i].nama, code);
   }
