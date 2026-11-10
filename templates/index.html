@@ -1,39 +1,123 @@
-<!doctype html>
-<html lang="id">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Kontrol LED</title>
-  <style>
-    body { font-family: system-ui, sans-serif; display: grid; place-items: center; min-height: 100vh; margin: 0; background: #f4f4f5; }
-    main { background: #fff; padding: 2rem; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,.08); text-align: center; width: 280px; }
-    h1 { font-size: 1.1rem; margin: 0 0 1rem; }
-    #state { font-size: 2rem; display: block; margin-bottom: 1.5rem; }
-    .on { color: #15803d; }
-    .off { color: #71717a; }
-    button { padding: .6rem 1rem; border: 0; border-radius: 6px; font-size: 1rem; cursor: pointer; }
-    #toggle { background: #18181b; color: #fff; width: 100%; }
-    form button { background: transparent; color: #71717a; margin-top: 1rem; }
-  </style>
-</head>
-<body>
-  <main>
-    <h1>Kontrol LED</h1>
-    <strong id="state" class="{{ 'on' if state.on else 'off' }}">{{ "ON" if state.on else "OFF" }}</strong>
-    <button id="toggle">{{ "Matikan LED" if state.on else "Nyalakan LED" }}</button>
-    <p style="margin:1rem 0 0"><a href="/devices" style="color:#71717a;font-size:.9rem">Kelola device</a></p>
-    <form method="post" action="/logout"><button type="submit">Keluar</button></form>
-  </main>
-  <script>
-    const isOn = {{ state.on|tojson }};
-    document.getElementById('toggle').addEventListener('click', async () => {
-      await fetch('/api/led', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ on: !isOn })
+{% extends "base.html" %}
+{% block title %}Dashboard — IoT Control{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Perangkat</h1>
+    <p class="muted">{{ devices|length }} device terdaftar</p>
+  </div>
+  <details class="add-box">
+    <summary class="btn primary">+ Tambah device</summary>
+    <form class="add-form" method="post" action="{{ url_for('add_device_route') }}">
+      <label>Nama device
+        <input type="text" name="name" placeholder="misal led-dapur" required>
+      </label>
+      <label>Tipe
+        <select name="type">
+          <option value="led">LED — switch on/off</option>
+          <option value="suhu">Suhu — tampil suhu</option>
+        </select>
+      </label>
+      <button class="btn primary" type="submit">Buat device</button>
+    </form>
+  </details>
+</div>
+
+<div class="grid">
+  {% for device in devices %}
+    <article class="card" data-device="{{ device.id }}" data-type="{{ device.type }}">
+      <div class="card-head">
+        <h2>{{ device.name }}</h2>
+        <span class="badge {{ device.type }}">{{ "LED" if device.type == "led" else "Suhu" }}</span>
+      </div>
+
+      {% if device.type == "led" %}
+        <div class="led-state {{ 'on' if device.led_on else 'off' }}">
+          <span class="dot"></span>{{ "ON" if device.led_on else "OFF" }}
+        </div>
+        <button class="btn toggle" data-toggle data-id="{{ device.id }}"
+                data-on="{{ 1 if device.led_on else 0 }}">
+          {{ "Matikan" if device.led_on else "Nyalakan" }}
+        </button>
+      {% else %}
+        <div class="temp">
+          {% if device.temperature is not none %}{{ "%.1f"|format(device.temperature) }} °C{% else %}—{% endif %}
+        </div>
+        <p class="muted ago" data-updated="{{ device.updated_at or '' }}">menunggu data</p>
+      {% endif %}
+
+      <details class="token">
+        <summary>Lihat token</summary>
+        <code>{{ device.token or "—" }}</code>
+      </details>
+
+      <form method="post" action="{{ url_for('delete_device_route', device_id=device.id) }}"
+            onsubmit="return confirm('Cabut device {{ device.name }}?')">
+        <button class="btn danger small" type="submit">Cabut device</button>
+      </form>
+    </article>
+  {% else %}
+    <p class="empty">Belum ada device. Tambahkan yang pertama lewat tombol di atas.</p>
+  {% endfor %}
+</div>
+
+<script>
+  function waktuLalu(iso) {
+    const detik = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+    if (detik < 60) return Math.round(detik) + " detik lalu";
+    if (detik < 3600) return Math.round(detik / 60) + " menit lalu";
+    return Math.round(detik / 3600) + " jam lalu";
+  }
+
+  function gambar(device) {
+    const card = document.querySelector('[data-device="' + device.id + '"]');
+    if (!card) return;
+    if (device.type === "led") {
+      const state = card.querySelector(".led-state");
+      state.classList.toggle("on", device.on);
+      state.classList.toggle("off", !device.on);
+      state.innerHTML = '<span class="dot"></span>' + (device.on ? "ON" : "OFF");
+      const btn = card.querySelector("[data-toggle]");
+      btn.dataset.on = device.on ? "1" : "0";
+      btn.textContent = device.on ? "Matikan" : "Nyalakan";
+    } else {
+      card.querySelector(".temp").textContent =
+        device.temperature === null ? "—" : device.temperature.toFixed(1) + " °C";
+      card.querySelector(".ago").textContent =
+        device.updated_at ? waktuLalu(device.updated_at) : "menunggu data";
+    }
+  }
+
+  async function segarkan() {
+    try {
+      const res = await fetch("/api/devices", { headers: { Accept: "application/json" } });
+      if (!res.ok) return;
+      (await res.json()).forEach(gambar);
+    } catch (err) {
+      console.warn("gagal menyegarkan data", err);
+    }
+  }
+
+  document.addEventListener("click", async (event) => {
+    const btn = event.target.closest("[data-toggle]");
+    if (!btn) return;
+    const on = btn.dataset.on !== "1";
+    btn.disabled = true;
+    try {
+      await fetch("/api/devices/" + btn.dataset.id + "/led", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ on: on }),
       });
-      location.reload();
-    });
-  </script>
-</body>
-</html>
+    } finally {
+      btn.disabled = false;
+      segarkan();
+    }
+  });
+
+  document.querySelectorAll(".ago").forEach((el) => {
+    if (el.dataset.updated) el.textContent = waktuLalu(el.dataset.updated);
+  });
+  setInterval(segarkan, 2000);
+</script>
+{% endblock %}

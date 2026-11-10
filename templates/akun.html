@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Akun — IoT Control{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Akun</h1>
+    <p class="muted">Login sebagai {{ user.username }}{% if user.is_admin %} (admin){% endif %}</p>
+  </div>
+</div>
+
+{% if error %}<div class="flash error">{{ error }}</div>{% endif %}
+
+<section class="panel">
+  <h2>Ganti password</h2>
+  <form class="add-form" method="post" action="{{ url_for('change_own_password') }}">
+    <label>Password lama
+      <input type="password" name="password_lama" required>
+    </label>
+    <label>Password baru (minimal 6 karakter)
+      <input type="password" name="password_baru" minlength="6" required>
+    </label>
+    <button class="btn primary" type="submit">Simpan password</button>
+  </form>
+</section>
+
+{% if user.is_admin %}
+<section class="panel">
+  <h2>Tambah user</h2>
+  <form class="add-form" method="post" action="{{ url_for('create_user') }}">
+    <label>Username
+      <input type="text" name="username" pattern="[A-Za-z0-9_-]{3,32}"
+             title="3–32 karakter: huruf, angka, _ atau -" required>
+    </label>
+    <label>Password (minimal 6 karakter)
+      <input type="password" name="password" minlength="6" required>
+    </label>
+    <label class="check">
+      <input type="checkbox" name="is_admin" value="1"> Jadikan admin
+    </label>
+    <button class="btn primary" type="submit">Tambah user</button>
+  </form>
+</section>
+
+<section class="panel">
+  <h2>Daftar user</h2>
+  <table class="users">
+    <thead>
+      <tr><th>Username</th><th>Peran</th><th>Reset password</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for row in users %}
+        <tr>
+          <td>{{ row.username }}{% if row.id == user.id %} <span class="muted">(kamu)</span>{% endif %}</td>
+          <td>{{ "Admin" if row.is_admin else "Anggota" }}</td>
+          <td>
+            <form class="inline" method="post" action="{{ url_for('reset_user_password', user_id=row.id) }}">
+              <input type="password" name="password" minlength="6" placeholder="password baru" required>
+              <button class="btn small" type="submit">Reset</button>
+            </form>
+          </td>
+          <td>
+            {% if row.id != user.id %}
+              <form class="inline" method="post" action="{{ url_for('remove_user', user_id=row.id) }}"
+                    onsubmit="return confirm('Hapus user {{ row.username }}?')">
+                <button class="btn danger small" type="submit">Hapus</button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+{% endblock %}

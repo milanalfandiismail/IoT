@@ -3,26 +3,21 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Login - Kontrol LED</title>
-  <style>
-    body { font-family: system-ui, sans-serif; display: grid; place-items: center; min-height: 100vh; margin: 0; background: #f4f4f5; }
-    form { background: #fff; padding: 2rem; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,.08); width: 280px; }
-    h1 { font-size: 1.1rem; margin: 0 0 1rem; }
-    label { display: block; font-size: .85rem; margin-bottom: .25rem; }
-    input { width: 100%; box-sizing: border-box; padding: .5rem; margin-bottom: 1rem; border: 1px solid #d4d4d8; border-radius: 6px; }
-    button { width: 100%; padding: .6rem; border: 0; border-radius: 6px; background: #18181b; color: #fff; font-size: 1rem; cursor: pointer; }
-    .error { color: #b91c1c; font-size: .85rem; margin: 0 0 1rem; }
-  </style>
+  <title>Masuk — IoT Control</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body>
-  <form method="post" action="/login">
-    <h1>Kontrol LED</h1>
-    {% if error %}<p class="error">{{ error }}</p>{% endif %}
-    <label for="username">Username</label>
-    <input id="username" name="username" autocomplete="username" required>
-    <label for="password">Password</label>
-    <input id="password" name="password" type="password" autocomplete="current-password" required>
-    <button type="submit">Masuk</button>
+<body class="auth-body">
+  <form class="auth-card" method="post" action="{{ url_for('login_post') }}">
+    <h1>IoT<span>Control</span></h1>
+    <p class="muted">Masuk untuk mengontrol perangkat.</p>
+    {% if error %}<div class="flash error">{{ error }}</div>{% endif %}
+    <label>Username
+      <input type="text" name="username" autocomplete="username" required autofocus>
+    </label>
+    <label>Password
+      <input type="password" name="password" autocomplete="current-password" required>
+    </label>
+    <button class="btn primary wide" type="submit">Masuk</button>
   </form>
 </body>
 </html>
