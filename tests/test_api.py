@@ -25,17 +25,17 @@ def test_led_rejects_non_json_body(client):
     assert r.status_code == 400
 
 
-def test_led_rejects_device_token(client):
+def test_led_rejects_device_token(client, device_token):
     r = client.post("/api/led", json={"on": True},
-                    headers={"Authorization": "Bearer token-esp32"})
+                    headers={"Authorization": f"Bearer {device_token}"})
     assert r.status_code == 401
 
 
-def test_device_state_with_device_token(client):
+def test_device_state_with_device_token(client, device_token):
     client.post("/api/led", json={"on": True},
                 headers={"Authorization": "Bearer token-manusia"})
     r = client.get("/api/device/state",
-                   headers={"Authorization": "Bearer token-esp32"})
+                   headers={"Authorization": f"Bearer {device_token}"})
     assert r.status_code == 200
     assert r.get_json() == {"on": True}
 
@@ -46,9 +46,9 @@ def test_device_state_rejects_api_token(client):
     assert r.status_code == 401
 
 
-def test_bearer_scheme_is_case_insensitive(client):
+def test_bearer_scheme_is_case_insensitive(client, device_token):
     r = client.get("/api/device/state",
-                   headers={"Authorization": "bearer token-esp32"})
+                   headers={"Authorization": f"bearer {device_token}"})
     assert r.status_code == 200
 
 

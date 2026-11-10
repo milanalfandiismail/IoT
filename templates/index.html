@@ -21,6 +21,7 @@
     <h1>Kontrol LED</h1>
     <strong id="state" class="{{ 'on' if state.on else 'off' }}">{{ "ON" if state.on else "OFF" }}</strong>
     <button id="toggle">{{ "Matikan LED" if state.on else "Nyalakan LED" }}</button>
+    <p style="margin:1rem 0 0"><a href="/devices" style="color:#71717a;font-size:.9rem">Kelola device</a></p>
     <form method="post" action="/logout"><button type="submit">Keluar</button></form>
   </main>
   <script>
