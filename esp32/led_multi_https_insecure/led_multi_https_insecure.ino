@@ -73,6 +73,23 @@ void setup() {
   for (int i = 0; i < 5 && !tungguDNS(); i++) sambungWiFi();
 }
 
+void uji(const char* host, int port) {
+  WiFiClient c;
+  unsigned long t = millis();
+  bool ok = c.connect(host, port, 3000);
+  Serial.printf("uji %s:%d -> %s (%lu ms)\n", host, port, ok ? "OK" : "GAGAL", millis() - t);
+  c.stop();
+}
+
+// Dipanggil saat poll gagal: bedakan DNS/NAT belum siap vs diblokir portal.
+void diagnosa() {
+  Serial.printf("GW: %s\n", WiFi.gatewayIP().toString().c_str());
+  uji(WiFi.gatewayIP().toString().c_str(), 80);
+  uji("1.1.1.1", 443);
+  uji(hostUrl().c_str(), 80);
+  uji(hostUrl().c_str(), 443);
+}
+
 bool poll(int i) {
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("WiFi putus");
@@ -114,6 +131,7 @@ void loop() {
   for (int i = 0; i < JUMLAH; i++) semua = poll(i) && semua;
 
   gagal = semua ? 0 : gagal + 1;
+  if (gagal == 2) diagnosa();
   if (gagal >= 2) {
     Serial.println("2x gagal, sambung ulang WiFi");
     sambungWiFi();
