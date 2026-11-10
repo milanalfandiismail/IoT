@@ -38,6 +38,9 @@ String hostUrl() {
 void sambungWiFi() {
   WiFi.disconnect();
   delay(500);
+  // IP tetap dari DHCP, tapi DNS dipaksa ke 1.1.1.1/8.8.8.8 (DNS router kadang bohong).
+  WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE,
+              IPAddress(1, 1, 1, 1), IPAddress(8, 8, 8, 8));
   WiFi.begin(SSID, PASSWORD);
   unsigned long mulai = millis();
   while (WiFi.status() != WL_CONNECTED && millis() - mulai < 20000) {
