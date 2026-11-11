@@ -38,14 +38,19 @@ String hostUrl() {
 void sambungWiFi() {
   WiFi.disconnect();
   delay(500);
-  // IP tetap dari DHCP, tapi DNS dipaksa ke 1.1.1.1/8.8.8.8 (DNS router kadang bohong).
+  // IP tetap dari DHCP, tapi DNS dipaksa ke 9.9.9.9 (DNS router kadang bohong,
+  // dan Quad9 mengembalikan IP Cloudflare yang tidak diblokir ISP lebih dulu).
   WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE,
-              IPAddress(1, 1, 1, 1), IPAddress(8, 8, 8, 8));
+              IPAddress(9, 9, 9, 9), IPAddress(1, 1, 1, 1));
   WiFi.begin(SSID, PASSWORD);
   unsigned long mulai = millis();
   while (WiFi.status() != WL_CONNECTED && millis() - mulai < 20000) {
     delay(300);
     Serial.print(".");
+  }
+  if (WiFi.status() != WL_CONNECTED) {   // timeout: jangan lanjut dengan IP 0.0.0.0
+    Serial.println("\nWiFi gagal tersambung");
+    return;
   }
   Serial.printf("\nWiFi tersambung  IP: %s\n", WiFi.localIP().toString().c_str());
   Serial.printf("SSID: %s  GW: %s  DNS: %s\n", WiFi.SSID().c_str(),
@@ -79,10 +84,10 @@ void setup() {
   for (int i = 0; i < 5 && !tungguDNS(); i++) sambungWiFi();
 }
 
-bool poll(int i) {
+int poll(int i) {
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("WiFi putus");
-    return false;
+    return -1;
   }
 
   HTTPClient http;
@@ -91,12 +96,11 @@ bool poll(int i) {
   bool https = String(URL).startsWith("https://");
   if (!(https ? http.begin(tls, URL) : http.begin(biasa, URL))) {
     Serial.printf("%s: begin gagal\n", lampu[i].nama);
-    return false;
+    return -2;
   }
   http.addHeader("Authorization", String("Bearer ") + lampu[i].token);
   int code = http.GET();
-  bool ok = (code == 200);
-  if (ok) {
+  if (code == 200) {
     String body = http.getString();
     bool on = body.indexOf("true") >= 0;
     if (on != lampu[i].nyala) {
@@ -110,13 +114,16 @@ bool poll(int i) {
                   HTTPClient::errorToString(code).c_str());
   }
   http.end();
-  return ok;
+  return code;
 }
 
 void loop() {
   for (int i = 0; i < JUMLAH; i++) {
-    if (!poll(i)) {
-      Serial.println("poll gagal, reset board");
+    int code = poll(i);
+    // Kode < 0 = masalah jaringan/sambungan → reset. 401/500 berarti server
+    // terjangkau, jadi cukup dicoba lagi putaran berikutnya.
+    if (code < 0) {
+      Serial.println("jaringan bermasalah, reset board");
       delay(1000);
       ESP.restart();
     }
