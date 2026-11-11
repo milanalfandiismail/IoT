@@ -38,9 +38,10 @@ String hostUrl() {
 void sambungWiFi() {
   WiFi.disconnect();
   delay(500);
-  // IP tetap dari DHCP, tapi DNS dipaksa ke 1.1.1.1/8.8.8.8 (DNS router kadang bohong).
+  // IP tetap dari DHCP, tapi DNS dipaksa ke 9.9.9.9 (DNS router kadang bohong,
+  // dan Quad9 mengembalikan IP Cloudflare yang tidak diblokir ISP lebih dulu).
   WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE,
-              IPAddress(1, 1, 1, 1), IPAddress(8, 8, 8, 8));
+              IPAddress(9, 9, 9, 9), IPAddress(1, 1, 1, 1));
   WiFi.begin(SSID, PASSWORD);
   unsigned long mulai = millis();
   while (WiFi.status() != WL_CONNECTED && millis() - mulai < 20000) {
