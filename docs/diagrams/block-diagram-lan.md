@@ -29,7 +29,7 @@ flowchart LR
 
 | | Versi domain (`block-diagram-1.png`) | Versi LAN (ini) |
 |---|---|---|
-| Alamat | `http://10.10.10.3:5000` | `http://10.10.10.3:5000` |
+| Alamat | `https://<domain>/api/...` | `http://10.10.10.3:5000/api/...` |
 | Lewat internet | ya, Cloudflare Tunnel | tidak |
 | Butuh internet | ya | tidak |
 | Latensi | kena jalur Cloudflare | langsung di LAN |
