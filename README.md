@@ -155,5 +155,5 @@ berlaku di halaman web — token device yang bocor tidak bisa membuka dashboard.
 | ESP32 `POST 400` | Kirim suhu ke device bertipe LED, atau nilai di luar `-50..80` |
 | Login selalu 401 | Password salah, atau user sudah dihapus admin |
 | Tombol tidak berubah | Session kedaluwarsa (ganti `SECRET_KEY`), login ulang |
-| Suhu tidak muncul | Sketch `dht_post` belum jalan, token salah, atau device bertipe LED |
+| Suhu tidak muncul | Sketch suhu (`dht_post` atau `led_multi_https_insecure`) belum jalan, token salah, atau device bertipe LED |
 | Butuh reset total | Hentikan server, hapus `data.db`; admin/rahasia dibuat lagi saat start |

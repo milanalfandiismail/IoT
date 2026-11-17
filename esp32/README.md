@@ -1,6 +1,6 @@
 # Firmware ESP32
 
-Tiga sketch, pilih sesuai device yang dibuat di dashboard:
+Empat sketch, pilih sesuai device yang dibuat di dashboard:
 
 - `led_poll/led_poll.ino` — satu LED. Polling `GET /api/device/state` tiap 1
   detik, LED di GPIO2 mengikuti respons `{"on": true|false}`. Pakai token device
@@ -8,9 +8,10 @@ Tiga sketch, pilih sesuai device yang dibuat di dashboard:
 - `led_multi_https_http/led_multi_https_http.ino` — beberapa LED di satu board,
   HTTPS dengan verifikasi sertifikat (dan tetap bisa `http://`). Butuh `CA_CERT`
   yang cocok dengan server; jam board harus benar.
-- `led_multi_https_insecure/led_multi_https_insecure.ino` — sama, tapi tanpa
-  verifikasi sertifikat (`setInsecure()`). Untuk demo/tugas di jaringan yang
-  tidak bisa diatur. Jangan untuk produksi.
+- `led_multi_https_insecure/led_multi_https_insecure.ino` — versi demo:
+  beberapa LED (`polling`) **dan** pembacaan DHT22 dalam satu sketch, HTTPS
+  tanpa verifikasi sertifikat (`setInsecure()`). Cocok untuk tugas di jaringan
+  yang tidak bisa diatur. Jangan untuk produksi.
 - `dht_post/dht_post.ino` — baca DHT11/DHT22 tiap 5 detik, kirim
   `POST /api/device/temperature`. Pakai token device bertipe **Suhu**.
 
@@ -20,7 +21,15 @@ Tiga sketch, pilih sesuai device yang dibuat di dashboard:
 2. `URL` — ganti `10.10.10.25` dengan IP laptop hasil `ipconfig` (IPv4 Address),
    atau isi domain publik bila server diekspos lewat reverse proxy.
    Pakai IP LAN, bukan `127.0.0.1`.
-3. `TOKEN` — token device dari kartu **Lihat token** di dashboard.
+3. `TOKEN` (atau token di `lampu[]`) — token device dari kartu **Lihat
+   token** di dashboard.
+
+Khusus `led_multi_https_insecure`, isi juga:
+
+- `URL_LED` dan `URL_SUHU` — dua endpoint berbeda (`/api/device/state` dan
+  `/api/device/temperature`).
+- `TOKEN_SUHU` — token device bertipe **Suhu**, bukan token LED.
+
 
 Untuk `led_multi_https_http` dan `led_multi_https_insecure`, isi array
 `lampu[]`: satu baris per LED berisi label, token, dan nomor GPIO. Board tidak
@@ -73,5 +82,7 @@ Untuk `dht_post`, sesuaikan juga `DHT_PIN` (default GPIO4) dan `DHT_TYPE`
   menentukan. Untuk HTTPS, `CA_CERT` di sketch harus berisi root CA server
   (default sudah diisi root CA publik yang umum; ganti bila memakai sertifikat
   sendiri).
-- `led_multi_https_insecure` tidak memeriksa sertifikat: koneksi tetap
+- `led_multi_https_insecure` juga mengirim suhu: baris `[Suhu] POST 200 body:
+{"celsius":27.4,"humidity":64.5}` muncul tiap 5 detik, dan `[DHT] gagal baca`
+berarti pull-up/kabel data bermasalah. Sketch ini tidak memeriksa sertifikat: koneksi tetap
   terenkripsi, tapi server palsu tidak terdeteksi. Pakai hanya untuk demo.

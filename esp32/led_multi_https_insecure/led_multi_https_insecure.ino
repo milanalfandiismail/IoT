@@ -1,13 +1,19 @@
 // Versi ringkas untuk demo: HTTPS tanpa verifikasi sertifikat (setInsecure).
-// Cocok untuk tugas/demo di jaringan yang tidak bisa diatur. Jangan dipakai
-// untuk produksi karena server bisa ditiru tanpa terdeteksi.
+// Satu sketch untuk semua perangkat: LED (polling) + DHT22 (kirim suhu/kelembapan).
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
+#include <DHT.h>
 
-const char* SSID     = "SSID_WIFI";
-const char* PASSWORD = "PASSWORD_WIFI";
-const char* URL      = "https://DOMAIN-ANDA/api/device/state";
+const char* SSID       = "SSID_WIFI";
+const char* PASSWORD   = "PASSWORD_WIFI";
+const char* URL_LED    = "https://DOMAIN-ANDA/api/device/state";
+const char* URL_SUHU   = "https://DOMAIN-ANDA/api/device/temperature";
+const char* TOKEN_SUHU = "ganti-token-suhu";
+
+#define DHT_PIN  4
+#define DHT_TYPE DHT22
+#define BACA_MS  5000     // DHT22 minimal 2 detik sekali
 
 struct Lampu {
   const char* nama;   // label di Serial Monitor
@@ -25,14 +31,17 @@ const int JUMLAH = sizeof(lampu) / sizeof(lampu[0]);
 
 WiFiClientSecure tls;
 WiFiClient biasa;
+DHT dht(DHT_PIN, DHT_TYPE);
+unsigned long terakhirSuhu = 0;
 
 // Host polos dari URL, misal "iot.contoh.id".
-String hostUrl() {
-  int a = String(URL).indexOf("://");
+String hostUrl(const char* url) {
+  String s(url);
+  int a = s.indexOf("://");
   a = (a < 0) ? 0 : a + 3;
-  int b = String(URL).indexOf('/', a);
-  if (b < 0) b = String(URL).length();
-  return String(URL).substring(a, b);
+  int b = s.indexOf('/', a);
+  if (b < 0) b = s.length();
+  return s.substring(a, b);
 }
 
 void sambungWiFi() {
@@ -63,7 +72,7 @@ void sambungWiFi() {
 bool tungguDNS() {
   IPAddress ip;
   for (int i = 0; i < 20; i++) {
-    if (WiFi.hostByName(hostUrl().c_str(), ip)) {
+    if (WiFi.hostByName(hostUrl(URL_LED).c_str(), ip)) {
       Serial.printf("DNS ok: %s\n", ip.toString().c_str());
       return true;
     }
@@ -73,12 +82,18 @@ bool tungguDNS() {
   return false;
 }
 
+// https:// pakai TLS tanpa verifikasi, http:// pakai client biasa.
+bool mulaiHttp(HTTPClient& http, const char* url) {
+  return String(url).startsWith("https://") ? http.begin(tls, url) : http.begin(biasa, url);
+}
+
 void setup() {
   Serial.begin(115200);
   for (int i = 0; i < JUMLAH; i++) {
     pinMode(lampu[i].pin, OUTPUT);
     digitalWrite(lampu[i].pin, LOW);
   }
+  dht.begin();
   tls.setInsecure();   // tanpa cek sertifikat: koneksi tetap terenkripsi
   sambungWiFi();
   for (int i = 0; i < 5 && !tungguDNS(); i++) sambungWiFi();
@@ -92,9 +107,7 @@ int poll(int i) {
 
   HTTPClient http;
   http.setTimeout(3000);
-  // https:// pakai TLS tanpa verifikasi, http:// pakai client biasa.
-  bool https = String(URL).startsWith("https://");
-  if (!(https ? http.begin(tls, URL) : http.begin(biasa, URL))) {
+  if (!mulaiHttp(http, URL_LED)) {
     Serial.printf("%s: begin gagal\n", lampu[i].nama);
     return -2;
   }
@@ -117,6 +130,36 @@ int poll(int i) {
   return code;
 }
 
+void kirimSuhu() {
+  if (millis() - terakhirSuhu < BACA_MS) return;
+  terakhirSuhu = millis();
+
+  float celsius = dht.readTemperature();
+  float humidity = dht.readHumidity();
+  if (isnan(celsius) || isnan(humidity)) {
+    Serial.println("[DHT] gagal baca, periksa pull-up 10k di pin data");
+    return;
+  }
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("[Suhu] WiFi putus, data dibuang");
+    return;
+  }
+
+  HTTPClient http;
+  http.setTimeout(3000);
+  if (!mulaiHttp(http, URL_SUHU)) {
+    Serial.println("[Suhu] begin gagal");
+    return;
+  }
+  http.addHeader("Content-Type", "application/json");
+  http.addHeader("Authorization", String("Bearer ") + TOKEN_SUHU);
+  String body = String("{\"celsius\":") + String(celsius, 1) +
+                String(",\"humidity\":") + String(humidity, 1) + "}";
+  int code = http.POST(body);
+  Serial.printf("[Suhu] POST %d body: %s\n", code, body.c_str());
+  http.end();
+}
+
 void loop() {
   for (int i = 0; i < JUMLAH; i++) {
     int code = poll(i);
@@ -128,5 +171,7 @@ void loop() {
       ESP.restart();
     }
   }
+
+  kirimSuhu();
   delay(1000);   // satu putaran per detik
 }
