@@ -132,8 +132,7 @@ int poll(int i) {
                   HTTPClient::errorToString(code).c_str());
   }
   http.end();
-  Serial.printf("%s: %lu ms
-", lampu[i].nama, millis() - t0);
+  Serial.printf("%s: %lu ms\n", lampu[i].nama, millis() - t0);
   return code;
 }
 
@@ -166,12 +165,21 @@ void kirimSuhu(int i) {
 }
 
 void loop() {
+  bool gagal = false;
+
   for (int i = 0; i < JUMLAH; i++) {
-    poll(i);
+    if (poll(i) < 0) gagal = true;
   }
 
   for (int i = 0; i < JUMLAH_SUHU; i++) {
     kirimSuhu(i);
+  }
+
+  // Sambung ulang WiFi supaya DNS di-resolve lagi dan dapat IP server yang baru
+  if (gagal) {
+    Serial.println("jaringan bermasalah, sambung ulang WiFi");
+    sambungWiFi();
+    for (int i = 0; i < 5 && !tungguDNS(); i++) sambungWiFi();
   }
 
   delay(500);
