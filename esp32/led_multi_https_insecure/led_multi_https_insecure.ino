@@ -9,7 +9,7 @@ const char* URL_LED  = "https://iot.milannn.my.id/api/device/state";
 const char* URL_SUHU = "https://iot.milannn.my.id/api/device/temperature";
 
 #define DHT_TYPE DHT22
-#define BACA_MS  5000
+#define BACA_MS  1000
 
 struct Lampu {
   const char* nama;
