@@ -167,12 +167,7 @@ void kirimSuhu(int i) {
 
 void loop() {
   for (int i = 0; i < JUMLAH; i++) {
-    int code = poll(i);
-    if (code < 0) {
-      Serial.println("jaringan bermasalah, reset board");
-      delay(1000);
-      ESP.restart();
-    }
+    poll(i);
   }
 
   for (int i = 0; i < JUMLAH_SUHU; i++) {
