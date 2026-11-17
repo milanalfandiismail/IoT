@@ -149,6 +149,22 @@ int poll(int i) {
   return code;
 }
 
+// Kirim satu kali. Dipisah supaya bisa diulang dengan koneksi baru.
+int kirimSuhuSekali(int i, float celsius, float humidity) {
+  if (!mulaiHttp(http, URL_SUHU)) {
+    Serial.printf("[%s] begin gagal\n", suhu[i].nama);
+    return -2;
+  }
+  http.addHeader("Content-Type", "application/json");
+  http.addHeader("Authorization", String("Bearer ") + suhu[i].token);
+  String body = String("{\"celsius\":") + String(celsius, 1) +
+                String(",\"humidity\":") + String(humidity, 1) + "}";
+  int code = http.POST(body);
+  Serial.printf("[%s] POST %d body: %s\n", suhu[i].nama, code, body.c_str());
+  http.end();
+  return code;
+}
+
 void kirimSuhu(int i) {
   if (millis() - suhu[i].terakhir < BACA_MS) return;
   suhu[i].terakhir = millis();
@@ -164,17 +180,11 @@ void kirimSuhu(int i) {
     return;
   }
 
-  if (!mulaiHttp(http, URL_SUHU)) {
-    Serial.printf("[%s] begin gagal\n", suhu[i].nama);
-    return;
+  if (kirimSuhuSekali(i, celsius, humidity) < 0) {
+    Serial.printf("[%s] ulang dengan koneksi baru\n", suhu[i].nama);
+    http.end();
+    kirimSuhuSekali(i, celsius, humidity);
   }
-  http.addHeader("Content-Type", "application/json");
-  http.addHeader("Authorization", String("Bearer ") + suhu[i].token);
-  String body = String("{\"celsius\":") + String(celsius, 1) +
-                String(",\"humidity\":") + String(humidity, 1) + "}";
-  int code = http.POST(body);
-  Serial.printf("[%s] POST %d body: %s\n", suhu[i].nama, code, body.c_str());
-  http.end();
 }
 
 void loop() {
