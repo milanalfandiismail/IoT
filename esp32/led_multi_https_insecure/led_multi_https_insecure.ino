@@ -105,7 +105,7 @@ void setup() {
   for (int i = 0; i < 5 && !tungguDNS(); i++) sambungWiFi();
 }
 
-int poll(int i) {
+int pollSekali(int i) {
   unsigned long t0 = millis();
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("WiFi putus");
@@ -133,6 +133,20 @@ int poll(int i) {
   }
   http.end();
   Serial.printf("%s: %lu ms\n", lampu[i].nama, millis() - t0);
+  return code;
+}
+
+// Koneksi keep-alive bisa sudah mati di sisi server atau WiFi, sedangkan
+// HTTPClient masih mengira hidup. Kalau gagal, tutup lalu coba sekali lagi
+// dengan koneksi baru.
+int poll(int i) {
+  int code = pollSekali(i);
+  if (code < 0) {
+    Serial.printf("%s: ulang dengan koneksi baru
+", lampu[i].nama);
+    http.end();
+    code = pollSekali(i);
+  }
   return code;
 }
 
