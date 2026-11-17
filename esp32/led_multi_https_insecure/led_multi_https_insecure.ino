@@ -142,8 +142,7 @@ int pollSekali(int i) {
 int poll(int i) {
   int code = pollSekali(i);
   if (code < 0) {
-    Serial.printf("%s: ulang dengan koneksi baru
-", lampu[i].nama);
+    Serial.printf("%s: ulang dengan koneksi baru\n", lampu[i].nama);
     http.end();
     code = pollSekali(i);
   }
