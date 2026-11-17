@@ -43,6 +43,9 @@
         <div class="temp">
           {% if device.temperature is not none %}{{ "%.1f"|format(device.temperature) }} °C{% else %}—{% endif %}
         </div>
+        <p class="hum">
+          {% if device.humidity is not none %}{{ "%.1f"|format(device.humidity) }} %RH{% else %}kelembapan —{% endif %}
+        </p>
         <p class="muted ago" data-updated="{{ device.updated_at or '' }}">menunggu data</p>
       {% endif %}
 
@@ -83,6 +86,10 @@
     } else {
       card.querySelector(".temp").textContent =
         device.temperature === null ? "—" : device.temperature.toFixed(1) + " °C";
+      card.querySelector(".hum").textContent =
+        device.humidity === null
+          ? "kelembapan —"
+          : device.humidity.toFixed(1) + " %RH";
       card.querySelector(".ago").textContent =
         device.updated_at ? waktuLalu(device.updated_at) : "menunggu data";
     }

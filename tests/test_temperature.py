@@ -50,3 +50,25 @@ def test_temperature_rejects_non_ascii_token(client):
 def test_temperature_does_not_touch_led_state(client, suhu):
     kirim(client, suhu, {"celsius": 30})
     assert list_devices()[0]["led_on"] == 0
+
+
+def test_humidity_saved(client, suhu):
+    r = kirim(client, suhu, {"celsius": 27.4, "humidity": 64.5})
+    assert r.status_code == 200
+    assert dashboard_devices()[0]["humidity"] == 64.5
+
+
+def test_humidity_optional_and_kept(client, suhu):
+    kirim(client, suhu, {"celsius": 27.4, "humidity": 64.5})
+    kirim(client, suhu, {"celsius": 28.0})
+    assert dashboard_devices()[0]["humidity"] == 64.5
+
+
+@pytest.mark.parametrize("payload", [
+    {"celsius": 27.4, "humidity": True},
+    {"celsius": 27.4, "humidity": 101},
+    {"celsius": 27.4, "humidity": -1},
+    {"celsius": 27.4, "humidity": "64"},
+])
+def test_humidity_rejects_invalid(client, suhu, payload):
+    assert kirim(client, suhu, payload).status_code == 400

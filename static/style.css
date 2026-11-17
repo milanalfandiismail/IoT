@@ -178,6 +178,7 @@ label.check input { width: auto; margin: 0; }
 .led-state.off { color: var(--muted); }
 
 .temp { font-size: 2rem; font-weight: 700; letter-spacing: -.02em; }
+.hum { font-size: .95rem; color: var(--muted); margin-top: .1rem; }
 
 .token { font-size: .8rem; color: var(--muted); }
 .token summary { cursor: pointer; }

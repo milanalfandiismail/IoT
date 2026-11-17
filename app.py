@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS devices (
     enabled INTEGER NOT NULL DEFAULT 1,
     led_on INTEGER NOT NULL DEFAULT 0,
     temperature REAL,
+    humidity REAL,
     updated_at TEXT
 )
 """
@@ -88,6 +89,7 @@ def _db():
         ("type", "TEXT NOT NULL DEFAULT 'led'"),
         ("led_on", "INTEGER NOT NULL DEFAULT 0"),
         ("temperature", "REAL"),
+        ("humidity", "REAL"),
         ("updated_at", "TEXT"),
     ):
         if name not in columns:
@@ -126,7 +128,7 @@ def add_device(name: str, device_type: str) -> str:
 def list_devices() -> list[dict]:
     with _db() as conn:
         rows = conn.execute(
-            "SELECT id, name, type, token, enabled, led_on, temperature, updated_at"
+            "SELECT id, name, type, token, enabled, led_on, temperature, humidity, updated_at"
             " FROM devices ORDER BY id"
         ).fetchall()
     return [dict(row) for row in rows]
@@ -140,6 +142,7 @@ def dashboard_devices() -> list[dict]:
             "type": device["type"],
             "on": bool(device["led_on"]),
             "temperature": device["temperature"],
+            "humidity": device["humidity"],
             "updated_at": device["updated_at"],
         }
         for device in list_devices()
@@ -177,7 +180,9 @@ def set_led(device_id: int, on: bool) -> str | None:
     return row["name"]
 
 
-def record_temperature(device_id: int, celsius: float) -> str | None:
+def record_temperature(
+    device_id: int, celsius: float, humidity: float | None = None
+) -> str | None:
     """Simpan bacaan suhu; kembalikan waktu bacaan, None jika bukan device suhu."""
     with _db() as conn:
         row = conn.execute(
@@ -188,8 +193,9 @@ def record_temperature(device_id: int, celsius: float) -> str | None:
             return None
         stamp = now()
         conn.execute(
-            "UPDATE devices SET temperature = ?, updated_at = ? WHERE id = ?",
-            (celsius, stamp, device_id),
+            "UPDATE devices SET temperature = ?, humidity = COALESCE(?, humidity)," 
+            " updated_at = ? WHERE id = ?",
+            (celsius, humidity, stamp, device_id),
         )
     return stamp
 
@@ -464,9 +470,23 @@ def create_app() -> Flask:
             or not -50 <= celsius <= 80
         ):
             return jsonify(error="celsius harus angka -50..80"), 400
-        stamp = record_temperature(device["id"], float(celsius))
-        log.info("suhu %s: %.1f C", device["name"], celsius)
-        return jsonify({"celsius": celsius, "updated_at": stamp})
+        humidity = body.get("humidity")
+        if humidity is not None and (
+            isinstance(humidity, bool)
+            or not isinstance(humidity, (int, float))
+            or not 0 <= humidity <= 100
+        ):
+            return jsonify(error="humidity harus angka 0..100"), 400
+        stamp = record_temperature(
+            device["id"], float(celsius), None if humidity is None else float(humidity)
+        )
+        log.info(
+            "suhu %s: %.1f C, %.1f %%RH",
+            device["name"], celsius, -1 if humidity is None else humidity,
+        )
+        return jsonify(
+            {"celsius": celsius, "humidity": humidity, "updated_at": stamp}
+        )
 
     return app
 

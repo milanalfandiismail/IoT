@@ -75,7 +75,7 @@ Semua anggota kelompok bisa login sendiri dari menu **Akun**:
 Di dashboard tekan **+ Tambah device**, isi nama, pilih tipe:
 
 - **LED** — kartu menampilkan switch ON/OFF.
-- **Suhu** — kartu menampilkan suhu terakhir dan kapan dibaca.
+- **Suhu** — kartu menampilkan suhu terakhir, kelembapan, dan kapan dibaca.
 
 Token device ditampilkan di kartu (**Lihat token**) dan bisa disalin kapan saja.
 Menekan **Cabut device** membuat token itu langsung tidak berlaku.
@@ -114,7 +114,7 @@ curl.exe http://127.0.0.1:5000/api/device/state -H "Authorization: Bearer <token
 Kirim suhu seperti yang dilakukan ESP32 (token device bertipe Suhu):
 
 ```powershell
-curl.exe -X POST http://127.0.0.1:5000/api/device/temperature -H "Authorization: Bearer <token-device>" -H "Content-Type: application/json" -d "{\"celsius\":27.4}"
+curl.exe -X POST http://127.0.0.1:5000/api/device/temperature -H "Authorization: Bearer <token-device>" -H "Content-Type: application/json" -d "{\"celsius\":27.4,\"humidity\":64.5}"
 ```
 
 ### 8. Firmware ESP32
@@ -140,7 +140,7 @@ Wi-Fi, IP laptop (`ipconfig`), dan `TOKEN` = token device dari kartu dashboard.
 | `GET` | `/api/devices` | session | JSON semua device untuk refresh dashboard |
 | `POST` | `/api/devices/<id>/led` | session atau `Bearer API_TOKEN` | `{"on": true\|false}` |
 | `GET` | `/api/device/state` | token device LED | `{"on": bool}` |
-| `POST` | `/api/device/temperature` | token device Suhu | `{"celsius": angka -50..80}` |
+| `POST` | `/api/device/temperature` | token device Suhu | `{"celsius": angka -50..80, "humidity": angka 0..100 (opsional)}` |
 
 `API_TOKEN` tidak berlaku di endpoint token device, dan token device tidak
 berlaku di halaman web — token device yang bocor tidak bisa membuka dashboard.

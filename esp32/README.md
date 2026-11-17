@@ -57,8 +57,8 @@ Untuk `dht_post`, sesuaikan juga `DHT_PIN` (default GPIO4) dan `DHT_TYPE`
 
 `dht_post`:
 
-- `POST 200 body: {"celsius":27.4}` tiap 5 detik.
-- Angka suhu di kartu dashboard ikut berubah.
+- `POST 200 body: {"celsius":27.4,"humidity":64.5}` tiap 5 detik.
+- Angka suhu dan kelembapan di kartu dashboard ikut berubah.
 - `POST 400` → token dipakai di device bertipe LED, atau suhu di luar `-50..80`.
 - `DHT gagal dibaca` → kabel data/sensor bermasalah.
 

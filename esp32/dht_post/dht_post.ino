@@ -26,12 +26,13 @@ void setup() {
 
 void loop() {
   static unsigned long lastRead = 0;
-  // DHT11 tidak boleh dibaca lebih sering dari ~1x per detik
+  // DHT22 minimal 2 detik sekali
   if (millis() - lastRead < 5000) return;
   lastRead = millis();
 
   float celsius = dht.readTemperature();
-  if (isnan(celsius)) {
+  float humidity = dht.readHumidity();
+  if (isnan(celsius) || isnan(humidity)) {
     Serial.println("DHT gagal dibaca");
     return;
   }
@@ -45,7 +46,8 @@ void loop() {
   http.begin(URL);
   http.addHeader("Content-Type", "application/json");
   http.addHeader("Authorization", authHeader);
-  String body = String("{\"celsius\":") + String(celsius, 1) + "}";
+  String body = String("{\"celsius\":") + String(celsius, 1) +
+                String(",\"humidity\":") + String(humidity, 1) + "}";
   int code = http.POST(body);
   Serial.printf("POST %d body: %s\n", code, body.c_str());
   http.end();
