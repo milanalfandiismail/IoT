@@ -1,50 +1,46 @@
-// Versi ringkas untuk demo: HTTPS tanpa verifikasi sertifikat (setInsecure).
-// Satu sketch untuk semua perangkat: LED (polling) + DHT22 (kirim suhu/kelembapan).
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <DHT.h>
 
-const char* SSID     = "SSID_WIFI";
-const char* PASSWORD = "PASSWORD_WIFI";
-const char* URL_LED  = "https://DOMAIN-ANDA/api/device/state";
-const char* URL_SUHU = "https://DOMAIN-ANDA/api/device/temperature";
+const char* SSID     = "TM_2.4G";
+const char* PASSWORD = "";
+const char* URL_LED  = "https://iot.milannn.my.id/api/device/state";
+const char* URL_SUHU = "https://iot.milannn.my.id/api/device/temperature";
 
 #define DHT_TYPE DHT22
-#define BACA_MS  5000     // DHT22 minimal 2 detik sekali
+#define BACA_MS  5000
 
 struct Lampu {
-  const char* nama;   // label di Serial Monitor
-  const char* token;  // token device dari kartu dashboard
+  const char* nama;
+  const char* token;
   uint8_t pin;
   bool nyala;
 };
 
-// Satu baris = satu LED. Pin aman: 2, 4, 5, 12-19, 21-23, 25-27, 32, 33.
 Lampu lampu[] = {
-  {"led-1", "ganti-token-led-1", 2, false},
-  {"led-2", "ganti-token-led-2", 4, false},
+  {"led-1", "EIFwyngGMzPB8xunORbenH3K-lesant8T9SpN_90FJg", 2, false},
+  {"led-2", "s5wlaSXYwRehVuyhYNlwpPHBJob5-uic2cLuJ97XRHw", 4, false},
 };
 const int JUMLAH = sizeof(lampu) / sizeof(lampu[0]);
 
 struct Suhu {
-  const char* nama;   // label di Serial Monitor
-  const char* token;  // token device bertipe suhu
+  const char* nama;
+  const char* token;
   uint8_t pin;
   DHT* dht;
   unsigned long terakhir;
 };
 
-// Satu baris = satu sensor DHT22. Pin jangan bentrok dengan pin LED di atas.
 Suhu suhu[] = {
-  {"dht-1", "ganti-token-suhu", 5, nullptr, 0},
+  {"dht-1", "SRPS32h2CAiyns8BoSEi2ApvY8FV1eI2WEuqWlbxT9Y", 5, nullptr, 0},
 };
 const int JUMLAH_SUHU = sizeof(suhu) / sizeof(suhu[0]);
 
 WiFiClientSecure tls;
 WiFiClient biasa;
+HTTPClient http;   // dipakai ulang antar-request (keep-alive)
 
-// Host polos dari URL, misal "iot.contoh.id".
 String hostUrl(const char* url) {
   String s(url);
   int a = s.indexOf("://");
@@ -57,8 +53,6 @@ String hostUrl(const char* url) {
 void sambungWiFi() {
   WiFi.disconnect();
   delay(500);
-  // IP tetap dari DHCP, tapi DNS dipaksa ke 9.9.9.9 (DNS router kadang bohong,
-  // dan Quad9 mengembalikan IP Cloudflare yang tidak diblokir ISP lebih dulu).
   WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE,
               IPAddress(9, 9, 9, 9), IPAddress(1, 1, 1, 1));
   WiFi.begin(SSID, PASSWORD);
@@ -67,7 +61,7 @@ void sambungWiFi() {
     delay(300);
     Serial.print(".");
   }
-  if (WiFi.status() != WL_CONNECTED) {   // timeout: jangan lanjut dengan IP 0.0.0.0
+  if (WiFi.status() != WL_CONNECTED) {
     Serial.println("\nWiFi gagal tersambung");
     return;
   }
@@ -77,8 +71,6 @@ void sambungWiFi() {
                 WiFi.dnsIP().toString().c_str());
 }
 
-// Hotspot HP bisa memberi IP sebelum NAT/DNS-nya siap; itu penyebab
-// "poll gagal -1" di boot pertama yang dulu baru sembuh setelah restart.
 bool tungguDNS() {
   IPAddress ip;
   for (int i = 0; i < 20; i++) {
@@ -92,7 +84,6 @@ bool tungguDNS() {
   return false;
 }
 
-// https:// pakai TLS tanpa verifikasi, http:// pakai client biasa.
 bool mulaiHttp(HTTPClient& http, const char* url) {
   return String(url).startsWith("https://") ? http.begin(tls, url) : http.begin(biasa, url);
 }
@@ -107,19 +98,20 @@ void setup() {
     suhu[i].dht = new DHT(suhu[i].pin, DHT_TYPE);
     suhu[i].dht->begin();
   }
-  tls.setInsecure();   // tanpa cek sertifikat: koneksi tetap terenkripsi
+  tls.setInsecure();
+  http.setReuse(true);   // pertahankan koneksi, hindari handshake tiap poll
+  http.setTimeout(3000);
   sambungWiFi();
   for (int i = 0; i < 5 && !tungguDNS(); i++) sambungWiFi();
 }
 
 int poll(int i) {
+  unsigned long t0 = millis();
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("WiFi putus");
     return -1;
   }
 
-  HTTPClient http;
-  http.setTimeout(3000);
   if (!mulaiHttp(http, URL_LED)) {
     Serial.printf("%s: begin gagal\n", lampu[i].nama);
     return -2;
@@ -140,6 +132,8 @@ int poll(int i) {
                   HTTPClient::errorToString(code).c_str());
   }
   http.end();
+  Serial.printf("%s: %lu ms
+", lampu[i].nama, millis() - t0);
   return code;
 }
 
@@ -158,8 +152,6 @@ void kirimSuhu(int i) {
     return;
   }
 
-  HTTPClient http;
-  http.setTimeout(3000);
   if (!mulaiHttp(http, URL_SUHU)) {
     Serial.printf("[%s] begin gagal\n", suhu[i].nama);
     return;
@@ -176,8 +168,6 @@ void kirimSuhu(int i) {
 void loop() {
   for (int i = 0; i < JUMLAH; i++) {
     int code = poll(i);
-    // Kode < 0 = masalah jaringan/sambungan → reset. 401/500 berarti server
-    // terjangkau, jadi cukup dicoba lagi putaran berikutnya.
     if (code < 0) {
       Serial.println("jaringan bermasalah, reset board");
       delay(1000);
@@ -189,5 +179,5 @@ void loop() {
     kirimSuhu(i);
   }
 
-  delay(1000);   // satu putaran per detik
+  delay(500);
 }
