@@ -5,13 +5,11 @@
 #include <HTTPClient.h>
 #include <DHT.h>
 
-const char* SSID       = "SSID_WIFI";
-const char* PASSWORD   = "PASSWORD_WIFI";
-const char* URL_LED    = "https://DOMAIN-ANDA/api/device/state";
-const char* URL_SUHU   = "https://DOMAIN-ANDA/api/device/temperature";
-const char* TOKEN_SUHU = "ganti-token-suhu";
+const char* SSID     = "SSID_WIFI";
+const char* PASSWORD = "PASSWORD_WIFI";
+const char* URL_LED  = "https://DOMAIN-ANDA/api/device/state";
+const char* URL_SUHU = "https://DOMAIN-ANDA/api/device/temperature";
 
-#define DHT_PIN  4
 #define DHT_TYPE DHT22
 #define BACA_MS  5000     // DHT22 minimal 2 detik sekali
 
@@ -29,10 +27,22 @@ Lampu lampu[] = {
 };
 const int JUMLAH = sizeof(lampu) / sizeof(lampu[0]);
 
+struct Suhu {
+  const char* nama;   // label di Serial Monitor
+  const char* token;  // token device bertipe suhu
+  uint8_t pin;
+  DHT* dht;
+  unsigned long terakhir;
+};
+
+// Satu baris = satu sensor DHT22. Pin jangan bentrok dengan pin LED di atas.
+Suhu suhu[] = {
+  {"dht-1", "ganti-token-suhu", 5, nullptr, 0},
+};
+const int JUMLAH_SUHU = sizeof(suhu) / sizeof(suhu[0]);
+
 WiFiClientSecure tls;
 WiFiClient biasa;
-DHT dht(DHT_PIN, DHT_TYPE);
-unsigned long terakhirSuhu = 0;
 
 // Host polos dari URL, misal "iot.contoh.id".
 String hostUrl(const char* url) {
@@ -93,7 +103,10 @@ void setup() {
     pinMode(lampu[i].pin, OUTPUT);
     digitalWrite(lampu[i].pin, LOW);
   }
-  dht.begin();
+  for (int i = 0; i < JUMLAH_SUHU; i++) {
+    suhu[i].dht = new DHT(suhu[i].pin, DHT_TYPE);
+    suhu[i].dht->begin();
+  }
   tls.setInsecure();   // tanpa cek sertifikat: koneksi tetap terenkripsi
   sambungWiFi();
   for (int i = 0; i < 5 && !tungguDNS(); i++) sambungWiFi();
@@ -130,33 +143,33 @@ int poll(int i) {
   return code;
 }
 
-void kirimSuhu() {
-  if (millis() - terakhirSuhu < BACA_MS) return;
-  terakhirSuhu = millis();
+void kirimSuhu(int i) {
+  if (millis() - suhu[i].terakhir < BACA_MS) return;
+  suhu[i].terakhir = millis();
 
-  float celsius = dht.readTemperature();
-  float humidity = dht.readHumidity();
+  float celsius = suhu[i].dht->readTemperature();
+  float humidity = suhu[i].dht->readHumidity();
   if (isnan(celsius) || isnan(humidity)) {
-    Serial.println("[DHT] gagal baca, periksa pull-up 10k di pin data");
+    Serial.printf("[%s] gagal baca, periksa pull-up 10k di pin data\n", suhu[i].nama);
     return;
   }
   if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("[Suhu] WiFi putus, data dibuang");
+    Serial.printf("[%s] WiFi putus, data dibuang\n", suhu[i].nama);
     return;
   }
 
   HTTPClient http;
   http.setTimeout(3000);
   if (!mulaiHttp(http, URL_SUHU)) {
-    Serial.println("[Suhu] begin gagal");
+    Serial.printf("[%s] begin gagal\n", suhu[i].nama);
     return;
   }
   http.addHeader("Content-Type", "application/json");
-  http.addHeader("Authorization", String("Bearer ") + TOKEN_SUHU);
+  http.addHeader("Authorization", String("Bearer ") + suhu[i].token);
   String body = String("{\"celsius\":") + String(celsius, 1) +
                 String(",\"humidity\":") + String(humidity, 1) + "}";
   int code = http.POST(body);
-  Serial.printf("[Suhu] POST %d body: %s\n", code, body.c_str());
+  Serial.printf("[%s] POST %d body: %s\n", suhu[i].nama, code, body.c_str());
   http.end();
 }
 
@@ -172,6 +185,9 @@ void loop() {
     }
   }
 
-  kirimSuhu();
+  for (int i = 0; i < JUMLAH_SUHU; i++) {
+    kirimSuhu(i);
+  }
+
   delay(1000);   // satu putaran per detik
 }

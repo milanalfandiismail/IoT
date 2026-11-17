@@ -28,7 +28,9 @@ Khusus `led_multi_https_insecure`, isi juga:
 
 - `URL_LED` dan `URL_SUHU` — dua endpoint berbeda (`/api/device/state` dan
   `/api/device/temperature`).
-- `TOKEN_SUHU` — token device bertipe **Suhu**, bukan token LED.
+- Array `suhu[]` — satu baris per sensor DHT22: label, token device bertipe
+  **Suhu**, dan pin data. Pin tidak boleh bentrok dengan pin di `lampu[]`.
+  Menambah sensor = menambah satu baris dan satu device di dashboard.
 
 
 Untuk `led_multi_https_http` dan `led_multi_https_insecure`, isi array
@@ -82,7 +84,7 @@ Untuk `dht_post`, sesuaikan juga `DHT_PIN` (default GPIO4) dan `DHT_TYPE`
   menentukan. Untuk HTTPS, `CA_CERT` di sketch harus berisi root CA server
   (default sudah diisi root CA publik yang umum; ganti bila memakai sertifikat
   sendiri).
-- `led_multi_https_insecure` juga mengirim suhu: baris `[Suhu] POST 200 body:
+- `led_multi_https_insecure` juga mengirim suhu: baris `[dht-1] POST 200 body:
 {"celsius":27.4,"humidity":64.5}` muncul tiap 5 detik, dan `[DHT] gagal baca`
 berarti pull-up/kabel data bermasalah. Sketch ini tidak memeriksa sertifikat: koneksi tetap
   terenkripsi, tapi server palsu tidak terdeteksi. Pakai hanya untuk demo.
